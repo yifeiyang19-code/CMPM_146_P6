@@ -1,0 +1,12 @@
+.venv/
+__pycache__/
+*.pyc
+
+kaggle/
+train/
+test/
+transfer_train/
+transfer_test/
+
+results/*.keras
+results/*.npy
