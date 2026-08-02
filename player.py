@@ -189,9 +189,6 @@ class UserWebcamPlayer:
 
         return int(np.argmax(predictions[0]))
 
-        return int(np.argmax(predictions[0]))    
-        return int(np.argmax(predictions[0]))
-
     def get_move(self, board_state):
         row, col = None, None
         while row is None:
