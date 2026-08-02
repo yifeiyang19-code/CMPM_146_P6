@@ -10,3 +10,5 @@ transfer_test/
 
 results/*.keras
 results/*.npy
+writeup_package/
+P6_writeup_package.zip

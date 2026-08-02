@@ -33,34 +33,106 @@ from matplotlib.image import imread
 import cv2
 
 class UserWebcamPlayer:
-    def _process_frame(self, frame):
-        frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        width, height = frame.shape
-        size = min(width, height)
-        pad = int((width-size)/2), int((height-size)/2)
-        frame = frame[pad[0]:pad[0]+size, pad[1]:pad[1]+size]
-        return frame
 
+    def __init__(self):
+        self.model = models.load_model(
+            "results/optimized_model_25_epochs_timestamp_1785637417.keras"
+        )
+
+        self.face_cascade = cv2.CascadeClassifier(
+            cv2.data.haarcascades +
+            "haarcascade_frontalface_default.xml"
+        )
+
+    def _process_frame(self, frame):
+        gray = cv2.cvtColor(
+            frame,
+            cv2.COLOR_BGR2GRAY
+        )
+
+        faces = self.face_cascade.detectMultiScale(
+            gray,
+            scaleFactor=1.1,
+            minNeighbors=6,
+            minSize=(100, 100)
+        )
+
+        if len(faces) > 0:
+            # Use the largest detected face.
+            x, y, w, h = max(
+                faces,
+                key=lambda face: face[2] * face[3]
+            )
+
+            # Keep more context around the face.
+            margin_x = int(w * 0.20)
+            margin_y = int(h * 0.20)
+
+            x1 = max(0, x - margin_x)
+            y1 = max(0, y - margin_y)
+
+            x2 = min(
+                gray.shape[1],
+                x + w + margin_x
+            )
+
+            y2 = min(
+                gray.shape[0],
+                y + h + margin_y
+            )
+
+            gray = gray[
+                y1:y2,
+                x1:x2
+            ]
+
+        # Make it square.
+        height, width = gray.shape
+        size = min(height, width)
+
+        start_y = (height - size) // 2
+        start_x = (width - size) // 2
+
+        gray = gray[
+            start_y:start_y + size,
+            start_x:start_x + size
+        ]
+
+        return gray
     def _access_webcam(self):
-        import cv2
         cv2.namedWindow("preview")
+
         vc = cv2.VideoCapture(0)
-        if vc.isOpened(): # try to get the first frame
+
+        if not vc.isOpened():
+            raise RuntimeError("Could not open webcam")
+
+        final_frame = None
+
+        while True:
             rval, frame = vc.read()
-            frame = self._process_frame(frame)
-        else:
-            rval = False
-        while rval:
+
+            if not rval:
+                break
+
+            # Show the original camera frame.
+            # Do not crop every preview frame.
             cv2.imshow("preview", frame)
-            rval, frame = vc.read()
-            frame = self._process_frame(frame)
+
             key = cv2.waitKey(20)
-            if key == 13: # exit on Enter
+
+            if key == 13:
+                # Process only the frame captured when Enter is pressed.
+                final_frame = self._process_frame(frame)
                 break
 
         vc.release()
-        cv2.destroyWindow("preview")
-        return frame
+        cv2.destroyAllWindows()
+
+        if final_frame is None:
+            raise RuntimeError("Could not capture webcam frame")
+
+        return final_frame
 
     def _print_reference(self, row_or_col):
         print('reference:')
@@ -94,22 +166,32 @@ class UserWebcamPlayer:
             raise e
     
     def _get_emotion(self, img) -> int:
-        # Your code goes here
-        #
-        # img an np array of size NxN (square), each pixel is a value between 0 to 255
-        # you have to resize this to image_size before sending to your model
-        # to show the image here, you can use:
-        # import matplotlib.pyplot as plt
-        # plt.imshow(img, cmap='gray', vmin=0, vmax=255)
-        # plt.show()
-        #
-        # You have to use your saved model, use resized img as input, and get one classification value out of it
-        # The classification value should be 0, 1, or 2 for neutral, happy or surprise respectively
+        img = cv2.resize(
+            img,
+            image_size
+        )
 
-        # return an integer (0, 1 or 2), otherwise the code will throw an error
-        return 1
-        pass
-    
+        img = cv2.cvtColor(
+            img,
+            cv2.COLOR_GRAY2RGB
+        )
+
+        img = np.expand_dims(
+            img,
+            axis=0
+        )
+
+        predictions = self.model.predict(
+            img,
+            verbose=0
+        )
+
+
+        return int(np.argmax(predictions[0]))
+
+        return int(np.argmax(predictions[0]))    
+        return int(np.argmax(predictions[0]))
+
     def get_move(self, board_state):
         row, col = None, None
         while row is None:

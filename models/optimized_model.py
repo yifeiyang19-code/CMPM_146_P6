@@ -17,10 +17,8 @@ class OptimizedModel(Model):
             layers.Conv2D(
                 16,
                 kernel_size=(3, 3),
-                padding="same",
-                kernel_initializer="he_normal"
+                activation="relu"
             ),
-            layers.LeakyReLU(alpha=0.1),
             layers.MaxPooling2D(
                 pool_size=(2, 2)
             ),
@@ -28,26 +26,22 @@ class OptimizedModel(Model):
             layers.Conv2D(
                 32,
                 kernel_size=(3, 3),
-                padding="same",
-                kernel_initializer="he_normal"
+                activation="relu"
             ),
-            layers.LeakyReLU(alpha=0.1),
             layers.MaxPooling2D(
                 pool_size=(2, 2)
             ),
 
             layers.Conv2D(
-                48,
+                64,
                 kernel_size=(3, 3),
-                padding="same",
-                kernel_initializer="he_normal"
+                activation="relu"
             ),
-            layers.LeakyReLU(alpha=0.1),
             layers.MaxPooling2D(
                 pool_size=(2, 2)
             ),
 
-            layers.Dropout(0.20),
+            layers.Dropout(0.15),
 
             layers.Flatten(),
 
@@ -60,7 +54,7 @@ class OptimizedModel(Model):
     def _compile_model(self):
         self.model.compile(
             optimizer=RMSprop(
-                learning_rate=0.001
+                learning_rate=0.0005
             ),
             loss="categorical_crossentropy",
             metrics=["accuracy"]
@@ -75,7 +69,7 @@ class OptimizedModel(Model):
         early_stopping = EarlyStopping(
             monitor="val_accuracy",
             mode="max",
-            patience=5,
+            patience=6,
             restore_best_weights=True,
             verbose=1
         )
